@@ -1,0 +1,345 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+//////////////////////////////////////////////////////
+// Business Enums
+//////////////////////////////////////////////////////
+
+enum SubscriptionPlan {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+enum UploadStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum EmailStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+enum AutomationStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
+enum ExportType {
+  XLSX
+  GOOGLE_SHEETS
+}
+
+enum UploadSource {
+  WEB
+  API
+}
+
+enum DocumentType {
+  INVOICE
+  RECEIPT
+  BUSINESS_CARD
+  AADHAAR
+  PAN
+  PASSPORT
+  DRIVING_LICENSE
+  FORM
+  TABLE
+  UNKNOWN
+}
+
+model User {
+  id            String  @id
+  name          String
+  email         String
+  emailVerified Boolean @default(false)
+  image         String?
+
+  // Authentication Relations
+  sessions Session[]
+  accounts Account[]
+
+  // Business Relations
+  subscription  Subscription?
+  uploads       Upload[]
+  usageRecords  UsageRecord[]
+  exportHistory ExportHistory[]
+  emailLogs     EmailLog[]
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+//////////////////////////////////////////////////////
+// Business Models
+//////////////////////////////////////////////////////
+
+model Subscription {
+  id String @id @default(cuid())
+
+  plan SubscriptionPlan @default(FREE)
+
+  uploadsPerDay Int @default(10)
+
+  isActive Boolean @default(true)
+
+  startsAt DateTime @default(now())
+
+  expiresAt DateTime?
+
+  razorpayCustomerId String?
+
+  razorpaySubscriptionId String?
+
+  userId String @unique
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+}
+
+model Upload {
+  // Primary Key
+  id           String       @id @default(cuid())
+  uploadSource UploadSource @default(WEB)
+
+  // File Information
+  originalFileName String
+  storedFileName   String
+  fileExtension    String
+  mimeType         String
+  fileSize         Int
+
+  // Storage
+  filePath String
+
+  // Processing
+  status       UploadStatus @default(PENDING)
+  documentType DocumentType @default(UNKNOWN)
+
+  // Foreign Keys
+  userId String
+
+  // Relations
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  extractedDocument ExtractedDocument?
+  exportHistory     ExportHistory[]
+  automationLogs    AutomationLog[]
+  emailLogs         EmailLog[]
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([documentType])
+}
+
+model ExtractedDocument {
+  // Primary Key
+  id String @id @default(cuid())
+
+  extractedData Json
+
+  confidence Float?
+
+  aiModel String?
+
+  processingTimeMs Int?
+
+  uploadId String @unique
+
+  upload Upload @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+}
+
+model UsageRecord {
+  // Primary Key
+  id String @id @default(cuid())
+
+  // Usage
+  date DateTime
+
+  uploads Int @default(0)
+
+  aiRequests Int @default(0)
+
+  exports Int @default(0)
+
+  // Foreign Key
+  userId String
+
+  // Relation
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Constraints
+  @@unique([userId, date])
+  @@index([date])
+}
+
+model ExportHistory {
+  // Primary Key
+  id String @id @default(cuid())
+
+  // Export Details
+  exportType ExportType
+
+  exportedAt DateTime @default(now())
+
+  destination String?
+
+  // Foreign Keys
+  userId   String
+  uploadId String
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  upload Upload @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Indexes
+  @@index([userId])
+  @@index([uploadId])
+}
+
+model AutomationLog {
+  // Primary Key
+  id String @id @default(cuid())
+
+  // Automation
+  step String
+
+  status AutomationStatus
+
+  message String?
+
+  metadata Json?
+
+  // Foreign Keys
+  uploadId String
+
+  // Relation
+  upload Upload @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([uploadId])
+  @@index([status])
+}
+
+model EmailLog {
+  // Primary Key
+  id String @id @default(cuid())
+
+  subject String
+
+  recipient String
+
+  status EmailStatus
+
+  providerMessageId String?
+
+  errorMessage String?
+
+  // Foreign Keys
+  userId String
+
+  uploadId String?
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  upload Upload? @relation(fields: [uploadId], references: [id], onDelete: SetNull)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
