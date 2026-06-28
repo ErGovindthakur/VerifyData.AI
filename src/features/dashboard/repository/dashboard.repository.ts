@@ -52,3 +52,38 @@ export async function getRecentUploads(userId: string) {
     },
   });
 }
+
+export async function incrementUsage(
+  userId: string
+) {
+  const today = new Date();
+
+  today.setHours(0, 0, 0, 0);
+
+  return prisma.usageRecord.upsert({
+    where: {
+      userId_date: {
+        userId,
+        date: today,
+      },
+    },
+
+    update: {
+      uploads: {
+        increment: 1,
+      },
+
+      aiRequests: {
+        increment: 1,
+      },
+    },
+
+    create: {
+      userId,
+      date: today,
+      uploads: 1,
+      aiRequests: 1,
+      exports: 0,
+    },
+  });
+}
