@@ -1,0 +1,17 @@
+import { generateExtraction } from "../providers/gemini.provider";
+import { EXTRACT_DOCUMENT_PROMPT } from "../prompts/extract-document";
+import { extractedDocumentSchema } from "../schemas/extracted-document.schema";
+import { extractJson } from "../utils/parse-json";
+
+export async function extractDocument(
+  file: File
+) {
+  const response = await generateExtraction(
+    EXTRACT_DOCUMENT_PROMPT,
+    file
+  );
+
+  const json = extractJson(response);
+
+  return extractedDocumentSchema.parse(json);
+}

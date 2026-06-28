@@ -24,6 +24,7 @@ enum SubscriptionPlan {
 
 enum UploadStatus {
   PENDING
+  UPLOADING
   PROCESSING
   COMPLETED
   FAILED
