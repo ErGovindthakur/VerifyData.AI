@@ -66,6 +66,18 @@ enum DocumentType {
   UNKNOWN
 }
 
+enum PaymentStatus {
+  CREATED
+  PAID
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentProvider {
+  RAZORPAY
+}
+
 model User {
   id            String  @id
   name          String
@@ -83,7 +95,8 @@ model User {
   usageRecords  UsageRecord[]
   exportHistory ExportHistory[]
   emailLogs     EmailLog[]
-
+  connectedAccounts ConnectedAccount[]
+  payments Payment[]
   // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -150,8 +163,6 @@ model Subscription {
 
   plan SubscriptionPlan @default(FREE)
 
-  uploadsPerDay Int @default(10)
-
   isActive Boolean @default(true)
 
   startsAt DateTime @default(now())
@@ -163,7 +174,7 @@ model Subscription {
   razorpaySubscriptionId String?
 
   userId String @unique
-
+  payments Payment[]
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
@@ -343,4 +354,58 @@ model EmailLog {
   updatedAt DateTime @updatedAt
 
   @@index([userId])
+}
+
+model ConnectedAccount {
+  id String @id @default(cuid())
+
+  provider String
+
+  accessToken String?
+  refreshToken String?
+
+  expiresAt DateTime?
+
+  scope String?
+
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, provider])
+}
+
+model Payment {
+  id String @id @default(cuid())
+
+  amount Int
+
+  currency String @default("INR")
+
+  status PaymentStatus
+
+  provider PaymentProvider @default(RAZORPAY)
+
+  providerOrderId String @unique
+
+  providerPaymentId String? @unique
+
+  providerSignature String?
+
+  userId String
+
+  subscriptionId String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
 }

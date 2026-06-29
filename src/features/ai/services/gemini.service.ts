@@ -13,5 +13,9 @@ export async function extractDocument(
 
   const json = extractJson(response);
 
+  // Normalize documentType to uppercase before Zod validation
+  if (json && typeof json === "object" && "documentType" in json) {
+    json.documentType = String(json.documentType).toUpperCase().trim();
+  }
   return extractedDocumentSchema.parse(json);
 }

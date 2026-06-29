@@ -1,11 +1,17 @@
 "use client";
 import { FcGoogle } from "react-icons/fc";
 import { FaGithub } from "react-icons/fa";
-
+import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
 export function SocialLogin() {
+  async function signInWithGoogle() {
+  await authClient.signIn.social({
+    provider: "google",
+    callbackURL: "/dashboard",
+  });
+}
   return (
     <div className="space-y-6">
       <div className="relative">
@@ -17,7 +23,7 @@ export function SocialLogin() {
       </div>
 
       <div className="grid gap-3">
-        <Button variant="outline" type="button">
+        <Button variant="outline" type="button" onClick={() => void signInWithGoogle()}>
           <FcGoogle className="mr-2 h-5 w-5" />
           Continue with Google
         </Button>
