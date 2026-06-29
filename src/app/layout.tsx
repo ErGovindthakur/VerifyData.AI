@@ -1,5 +1,5 @@
 import { Geist, Geist_Mono } from "next/font/google";
-
+import Script from "next/script";
 import "./globals.css";
 import "@/styles/theme.css";
 import { metadata } from "@/shared/config/metadata";
@@ -22,6 +22,10 @@ type RootLayoutProps = Readonly<{
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <Script
+  src="https://checkout.razorpay.com/v1/checkout.js"
+  strategy="afterInteractive"
+/>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <Providers>{children}
           <Toaster richColors/>
