@@ -32,7 +32,7 @@ export async function markPaymentPaid(
   db: PrismaExecutor,
   orderId: string,
   paymentId: string,
-  signature: string
+  signature: string | null
 ) {
   return db.payment.update({
     where: {
@@ -64,6 +64,33 @@ export async function markPaymentFailed(
 
     data: {
       status: PaymentStatus.FAILED,
+    },
+  });
+}
+
+export async function markWebhookPaymentFailed(
+  orderId: string,
+  paymentId: string
+) {
+  return prisma.payment.update({
+    where: {
+      providerOrderId: orderId,
+    },
+
+    data: {
+      status: PaymentStatus.FAILED,
+
+      providerPaymentId: paymentId,
+    },
+  });
+}
+
+export async function findPaymentByOrderId(
+  orderId: string
+) {
+  return prisma.payment.findUnique({
+    where: {
+      providerOrderId: orderId,
     },
   });
 }

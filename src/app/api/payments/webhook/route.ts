@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
+import { handleWebhook } from "@/features/billing/services/webhook-handler.service";
 import { verifyWebhookSignature } from "@/features/billing/payments/webhook.service";
 
 export async function POST(
@@ -43,16 +43,11 @@ export async function POST(
     );
   }
 
-  const payload = JSON.parse(body);
+ const payload = JSON.parse(body);
 
-console.log("========== WEBHOOK ==========");
-console.log("Event:", payload.event);
+await handleWebhook(payload);
 
-console.log(
-  JSON.stringify(payload, null, 2)
-);
-
-  return NextResponse.json({
-    received: true,
-  });
+return NextResponse.json({
+  received: true,
+});
 }
